@@ -1,12 +1,17 @@
+#!/usr/bin/env python3
+
 """
 Created April 24, 2022
 Author: Willy Lin
 Quine McCluskey EE-26 Project
 """
-import pandas as pd
+from numpy import count_nonzero
+
 import csv
 from functools import reduce
 import numpy as np
+
+from pprint import pprint
 
 def read_in():
     print("in read in")
@@ -62,73 +67,104 @@ def _getTwos(arr1, arr2):
                 arr1[j][3] = True
     return twoscubes,arr1,arr2
 
-def mintermsToPIs(minterms,dont_cares):
+def compare(x,y):
+    counter = -1;
+    out = []
+    x = "".join(reversed(x))
+    y = "".join(reversed(y))
+    for i in range(max(len(x),len(y))):
+        l = x[i] if i < len(x) else '0'
+        r = y[i] if i < len(y) else '0'
 
-    print("The minterms are: ", minterms)
-    print("The don't cares are ", dont_cares)
-    
-    # number of 1s bits per integer 
-    zero_bit = [0]
-    one_bit = [1,2,4,8]
-    two_bit = [3,5,6,9,10,12]
-    three_bit = [7,11,13,14]
-    four_bit = [15]
-    
-    #combine minterms and dont cares
-    
-    
-    
-    # Orders the minterms into arrays in the 0's column of the chart
-    m = set(minterms).union(set(dont_cares))
-    n_0_bit = [x for x in zero_bit if x in m]
-    n_1_bit = [x for x in one_bit if x in m]
-    n_2_bit = [x for x in two_bit if x in m]
-    n_3_bit = [x for x in three_bit if x in m]
-    n_4_bit = [x for x in four_bit if x in m]
-    
-    #adds bools to the end of the 0's cube column
-    n_0_bit = addBool(n_0_bit)
-    n_1_bit= addBool(n_1_bit)
-    n_2_bit= addBool(n_2_bit)
-    n_3_bit= addBool(n_3_bit)
-    n_4_bit= addBool(n_4_bit)
-    
-    # finds all the one's cubes 
-    onescube0,n_0_bit,n_1_bit= _getOnes(n_0_bit,n_1_bit)
-    onescube1,n_1_bit,n_2_bit= _getOnes(n_1_bit,n_2_bit)
-    onescube2,n_2_bit,n_3_bit= _getOnes(n_2_bit,n_3_bit)
-    onescube3,n_3_bit,n_4_bit= _getOnes(n_3_bit,n_4_bit)
+        print(f"{l=},{r=},{i=}")
+        if(l == r):
+            out.append(l)
+            continue
+        if counter != -1:
+            return False
+        counter = i
+        out.append('X')
+       
+    out = reversed(out)
+
+    return "".join(out)
     
     
-    # finds all the two's cubes
-    twocube0,onescube0,onescube1 = _getTwos(onescube0,onescube1)
-    twocube1,onescube1,onescube2 = _getTwos(onescube1,onescube2)
-    twocube2,onescube2,onescube3 = _getTwos(onescube2,onescube3)
+
     
-    print("0's True means it has been checked off: ")
-    print(n_0_bit)
-    print(n_1_bit)
-    print(n_2_bit)
-    print(n_3_bit)
-    print(n_4_bit)
+
+
+def mintermsToPIs(minterms,dc):
+
+    # print("The minterms are: ", minterms)
+    # print("The don't cares are ", dc)
     
-    print("ones cubes")
-    print(onescube0)
-    print(onescube1)
-    print(onescube2)
-    print(onescube3)
+    count = {0:{}}    
+    mintermsdc = minterms+dc
+
+
+    for i in range(len(mintermsdc)):
+        if(mintermsdc[i] == 0):
+            count[0][0] = [bin(0)[2:]]
+        elif(bin(mintermsdc[i]).count('1') in count[0]):
+
+            count[0][bin(mintermsdc[i]).count('1')].append(bin(mintermsdc[i])[2:])
+        else:
+
+            count[0][bin(mintermsdc[i]).count('1')] = [bin(mintermsdc[i])[2:]]
+
+    # print(count)
+
+
+    # print(count)
+
+    for i_cubes in range(5): 
+        if i_cubes not in count:
+            break   
+        for i in count[i_cubes].keys():
+            count[i_cubes][i].append(False)
+        for i in range(max(count[i_cubes].keys()) + 1):
+            if i in count[i_cubes] and i+1 in count[i_cubes]:
+                for x in count[i_cubes][i][:-1]: 
+                    for y in count[i_cubes][i+1][:-1]:
+                        print(f"{x=}, {y=}")
+                        print(compare(x,y))
+                        ones = compare(x,y)
+                        if not ones:
+                            continue
+                        if i_cubes + 1 not in count:
+                            count[i_cubes + 1] = {}
+                        if ones.count('1') in count[i_cubes+1]:
+                            count[i_cubes + 1][ones.count('1')].append(ones)
+                        else:
+                            count[i_cubes + 1][ones.count('1')] = [ones]
+    pprint(count)
+            
     
-    print("twos cube")
-    print(twocube1)
+    # print("0's True means it has been checked off: ")
+    # print(n_0_bit)
+    # print(n_1_bit)
+    # print(n_2_bit)
+    # print(n_3_bit)
+    # print(n_4_bit)
+    
+    # print("ones cubes")
+    # print(onescube0)
+    # print(onescube1)
+    # print(onescube2)
+    # print(onescube3)
+    
+    # print("twos cube")
+    # print(twocube1)
    
     
     unuseds = []
-    # adds all of the cubes into one list so that we can find the Essential PIs
-    all_lists = n_0_bit + n_1_bit + n_2_bit + n_3_bit + n_4_bit + onescube0 + onescube1 + onescube2 + onescube3 + twocube1
-    unuseds = findUnuseds(all_lists)
+    # # adds all of the cubes into one list so that we can find the Essential PIs
+    # all_lists = n_0_bit + n_1_bit + n_2_bit + n_3_bit + n_4_bit + onescube0 + onescube1 + onescube2 + onescube3 + twocube1
+    # unuseds = findUnuseds(all_lists)
 
-    print("Prime Implicants are: ",unuseds)
-    print("Now looking for Essential PIs")
+    # print("Prime Implicants are: ",unuseds)
+    # print("Now looking for Essential PIs")
     
     return unuseds
     
